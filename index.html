@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>விவசாய AI உதவியாளர்</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     body {
       font-family: 'Segoe UI', Arial, sans-serif;
@@ -96,6 +97,31 @@
       font-style: italic;
       color: #888;
     }
+
+    /* Markdown styles */
+    .bot-message p { margin: 5px 0; }
+    .bot-message ul { padding-left: 20px; }
+    .bot-message ol { padding-left: 20px; }
+    .bot-message code {
+      background: #eee;
+      padding: 2px 4px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+    .bot-message pre {
+      background: #eee;
+      padding: 8px;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+    .bot-message table {
+      border-collapse: collapse;
+      margin-top: 5px;
+    }
+    .bot-message th, .bot-message td {
+      border: 1px solid #ccc;
+      padding: 5px 10px;
+    }
   </style>
 </head>
 <body>
@@ -119,10 +145,11 @@
       chat.scrollTop = chat.scrollHeight;
     };
 
-    function addMessage(content, sender) {
+    function addMessage(content, sender, isMarkdown = false) {
       const msgDiv = document.createElement("div");
       msgDiv.className = sender === "user" ? "user-message" : "bot-message";
-      msgDiv.innerHTML = content + `<span class="timestamp">${new Date().toLocaleTimeString()}</span>`;
+      msgDiv.innerHTML = (isMarkdown ? marked.parse(content) : content) +
+        `<span class="timestamp">${new Date().toLocaleTimeString()}</span>`;
       chat.appendChild(msgDiv);
       chat.scrollTop = chat.scrollHeight;
       localStorage.setItem("chatHistory", chat.innerHTML);
@@ -155,7 +182,7 @@
         // Remove loading message
         loadingMsg.remove();
 
-        // Typing animation
+        // Typing animation with Markdown
         let text = "";
         const msgDiv = document.createElement("div");
         msgDiv.className = "bot-message";
@@ -163,8 +190,9 @@
 
         for (let i = 0; i < reply.length; i++) {
           text += reply[i];
-          msgDiv.innerHTML = `🤖: ${text}<span class="timestamp">${new Date().toLocaleTimeString()}</span>`;
-          await new Promise(r => setTimeout(r, 20));
+          msgDiv.innerHTML = marked.parse("🤖: " + text) +
+            `<span class="timestamp">${new Date().toLocaleTimeString()}</span>`;
+          await new Promise(r => setTimeout(r, 15));
         }
 
         localStorage.setItem("chatHistory", chat.innerHTML);
