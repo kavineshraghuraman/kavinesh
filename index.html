@@ -101,7 +101,7 @@
     const chat = document.getElementById("chat");
     const input = document.getElementById("userInput");
 
-    // Load previous messages
+    // Load previous chat history
     window.onload = () => {
       const saved = localStorage.getItem("chatHistory");
       if (saved) chat.innerHTML = saved;
@@ -133,29 +133,25 @@
       chat.scrollTop = chat.scrollHeight;
 
       try {
-        // Call Groq API directly
-        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        const res = await fetch("/api/chat", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer YOUR_GROQ_API_KEY"
-          },
-          body: JSON.stringify({
-            model: "llama-3.1-70b-versatile",
-            messages: [
-              {
-                role: "system",
-                content: "நீங்கள் ஒரு தமிழ் விவசாய உதவியாளர். பதில்களை எப்போதும் Markdown வடிவில் எழுதவும், பட்டியலுக்கு - மற்றும் **போல்ட்** பயன்படுத்தவும்."
-              },
-              { role: "user", content: question }
-            ]
-          })
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: question })
         });
 
-        const data = await response.json();
-        const reply = data.choices?.[0]?.message?.content || "பதிலை பெற முடியவில்லை.";
+        const data = await res.json();
+        let reply = data.reply || "பதிலை பெற முடியவில்லை.";
 
         loadingMsg.remove();
+
+        // Fallback: Auto bullet points if missing
+        if (!reply.includes("- ") && reply.includes("\n")) {
+          reply = reply
+            .split("\n")
+            .filter(line => line.trim())
+            .map(line => `- ${line}`)
+            .join("\n");
+        }
 
         // Typing animation
         let text = "";
@@ -166,6 +162,7 @@
         for (let i = 0; i < reply.length; i++) {
           text += reply[i];
           msgDiv.innerHTML = `🤖: ${text}<span class="timestamp">${new Date().toLocaleTimeString()}</span>`;
+          chat.scrollTop = chat.scrollHeight;
           await new Promise(r => setTimeout(r, 15));
         }
 
@@ -182,7 +179,7 @@
       }
     }
 
-    // Send message on Enter
+    // Send on Enter
     input.addEventListener("keypress", (e) => {
       if (e.key === "Enter") sendMessage();
     });
