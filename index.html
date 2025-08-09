@@ -11,7 +11,6 @@
       background: linear-gradient(to right, #f1f8e9, #e8f5e9);
       margin: 0;
     }
-
     .chat-container {
       max-width: 650px;
       margin: 40px auto;
@@ -20,13 +19,11 @@
       border-radius: 15px;
       box-shadow: 0 4px 20px rgba(0,0,0,0.1);
     }
-
     h2 {
       text-align: center;
       margin-bottom: 15px;
       color: #2e7d32;
     }
-
     .messages {
       height: 350px;
       overflow-y: auto;
@@ -37,7 +34,6 @@
       border-radius: 10px;
       scroll-behavior: smooth;
     }
-
     .user-message, .bot-message {
       padding: 10px;
       border-radius: 10px;
@@ -46,31 +42,26 @@
       max-width: 85%;
       word-wrap: break-word;
     }
-
     .user-message {
       background: #c8e6c9;
       text-align: right;
       margin-left: auto;
     }
-
     .bot-message {
       background: #e3f2fd;
       text-align: left;
       margin-right: auto;
     }
-
     .timestamp {
       font-size: 0.75em;
       color: #666;
       display: block;
       margin-top: 5px;
     }
-
     .input-area {
       display: flex;
       gap: 10px;
     }
-
     input[type="text"] {
       flex: 1;
       padding: 10px;
@@ -78,7 +69,6 @@
       border: 1px solid #ccc;
       font-size: 14px;
     }
-
     button {
       padding: 10px 15px;
       background: #4caf50;
@@ -88,39 +78,12 @@
       cursor: pointer;
       transition: background 0.3s ease;
     }
-
     button:hover {
       background: #388e3c;
     }
-
     .loading {
       font-style: italic;
       color: #888;
-    }
-
-    /* Markdown styles */
-    .bot-message p { margin: 5px 0; }
-    .bot-message ul { padding-left: 20px; }
-    .bot-message ol { padding-left: 20px; }
-    .bot-message code {
-      background: #eee;
-      padding: 2px 4px;
-      border-radius: 4px;
-      font-family: monospace;
-    }
-    .bot-message pre {
-      background: #eee;
-      padding: 8px;
-      border-radius: 4px;
-      overflow-x: auto;
-    }
-    .bot-message table {
-      border-collapse: collapse;
-      margin-top: 5px;
-    }
-    .bot-message th, .bot-message td {
-      border: 1px solid #ccc;
-      padding: 5px 10px;
     }
   </style>
 </head>
@@ -170,19 +133,31 @@
       chat.scrollTop = chat.scrollHeight;
 
       try {
-        const response = await fetch("/api/chat", {
+        // Call Groq API directly
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: question })
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer YOUR_GROQ_API_KEY"
+          },
+          body: JSON.stringify({
+            model: "llama-3.1-70b-versatile",
+            messages: [
+              {
+                role: "system",
+                content: "நீங்கள் ஒரு தமிழ் விவசாய உதவியாளர். பதில்களை எப்போதும் Markdown வடிவில் எழுதவும், பட்டியலுக்கு - மற்றும் **போல்ட்** பயன்படுத்தவும்."
+              },
+              { role: "user", content: question }
+            ]
+          })
         });
 
         const data = await response.json();
-        const reply = data.reply || "பதிலை பெற முடியவில்லை.";
+        const reply = data.choices?.[0]?.message?.content || "பதிலை பெற முடியவில்லை.";
 
-        // Remove loading message
         loadingMsg.remove();
 
-        // Typing animation with Markdown
+        // Typing animation
         let text = "";
         const msgDiv = document.createElement("div");
         msgDiv.className = "bot-message";
@@ -190,10 +165,13 @@
 
         for (let i = 0; i < reply.length; i++) {
           text += reply[i];
-          msgDiv.innerHTML = marked.parse("🤖: " + text) +
-            `<span class="timestamp">${new Date().toLocaleTimeString()}</span>`;
+          msgDiv.innerHTML = `🤖: ${text}<span class="timestamp">${new Date().toLocaleTimeString()}</span>`;
           await new Promise(r => setTimeout(r, 15));
         }
+
+        // Render Markdown after typing
+        msgDiv.innerHTML = marked.parse("🤖: " + reply) +
+          `<span class="timestamp">${new Date().toLocaleTimeString()}</span>`;
 
         localStorage.setItem("chatHistory", chat.innerHTML);
         chat.scrollTop = chat.scrollHeight;
