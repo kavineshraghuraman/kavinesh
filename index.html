@@ -8,14 +8,13 @@
     body {
       font-family: 'Segoe UI', Arial, sans-serif;
       background: linear-gradient(to right, #f1f8e9, #e8f5e9);
-      padding: 0;
       margin: 0;
     }
 
     .chat-container {
       max-width: 650px;
       margin: 40px auto;
-      background: #ffffff;
+      background: #fff;
       padding: 20px;
       border-radius: 15px;
       box-shadow: 0 4px 20px rgba(0,0,0,0.1);
@@ -35,22 +34,35 @@
       margin-bottom: 15px;
       background: #fafafa;
       border-radius: 10px;
+      scroll-behavior: smooth;
+    }
+
+    .user-message, .bot-message {
+      padding: 10px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      position: relative;
+      max-width: 85%;
+      word-wrap: break-word;
     }
 
     .user-message {
       background: #c8e6c9;
-      padding: 10px;
-      border-radius: 10px;
-      margin-bottom: 10px;
       text-align: right;
+      margin-left: auto;
     }
 
     .bot-message {
       background: #e3f2fd;
-      padding: 10px;
-      border-radius: 10px;
-      margin-bottom: 10px;
       text-align: left;
+      margin-right: auto;
+    }
+
+    .timestamp {
+      font-size: 0.75em;
+      color: #666;
+      display: block;
+      margin-top: 5px;
     }
 
     .input-area {
@@ -80,9 +92,9 @@
       background: #388e3c;
     }
 
-    /* Smooth scroll */
-    .messages {
-      scroll-behavior: smooth;
+    .loading {
+      font-style: italic;
+      color: #888;
     }
   </style>
 </head>
@@ -97,14 +109,38 @@
   </div>
 
   <script>
+    const chat = document.getElementById("chat");
+    const input = document.getElementById("userInput");
+
+    // Load previous messages
+    window.onload = () => {
+      const saved = localStorage.getItem("chatHistory");
+      if (saved) chat.innerHTML = saved;
+      chat.scrollTop = chat.scrollHeight;
+    };
+
+    function addMessage(content, sender) {
+      const msgDiv = document.createElement("div");
+      msgDiv.className = sender === "user" ? "user-message" : "bot-message";
+      msgDiv.innerHTML = content + `<span class="timestamp">${new Date().toLocaleTimeString()}</span>`;
+      chat.appendChild(msgDiv);
+      chat.scrollTop = chat.scrollHeight;
+      localStorage.setItem("chatHistory", chat.innerHTML);
+    }
+
     async function sendMessage() {
-      const input = document.getElementById("userInput");
-      const chat = document.getElementById("chat");
       const question = input.value.trim();
       if (!question) return;
-      
-      chat.innerHTML += `<div class="user-message">👨‍🌾: ${question}</div>`;
+
+      addMessage(`👨‍🌾: ${question}`, "user");
       input.value = "";
+
+      // Show "Bot is typing..."
+      const loadingMsg = document.createElement("div");
+      loadingMsg.className = "bot-message loading";
+      loadingMsg.textContent = "🤖: எழுதுகிறது...";
+      chat.appendChild(loadingMsg);
+      chat.scrollTop = chat.scrollHeight;
 
       try {
         const response = await fetch("/api/chat", {
@@ -115,12 +151,35 @@
 
         const data = await response.json();
         const reply = data.reply || "பதிலை பெற முடியவில்லை.";
-        chat.innerHTML += `<div class="bot-message">🤖: ${reply}</div>`;
+
+        // Remove loading message
+        loadingMsg.remove();
+
+        // Typing animation
+        let text = "";
+        const msgDiv = document.createElement("div");
+        msgDiv.className = "bot-message";
+        chat.appendChild(msgDiv);
+
+        for (let i = 0; i < reply.length; i++) {
+          text += reply[i];
+          msgDiv.innerHTML = `🤖: ${text}<span class="timestamp">${new Date().toLocaleTimeString()}</span>`;
+          await new Promise(r => setTimeout(r, 20));
+        }
+
+        localStorage.setItem("chatHistory", chat.innerHTML);
         chat.scrollTop = chat.scrollHeight;
+
       } catch (error) {
-        chat.innerHTML += `<div class="bot-message">⚠️ பிழை ஏற்பட்டது. இணைய இணைப்பை சரிபார்க்கவும்.</div>`;
+        loadingMsg.remove();
+        addMessage("⚠️ பிழை ஏற்பட்டது. இணைய இணைப்பை சரிபார்க்கவும்.", "bot");
       }
     }
+
+    // Send message on Enter
+    input.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") sendMessage();
+    });
   </script>
 </body>
 </html>
